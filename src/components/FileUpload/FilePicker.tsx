@@ -15,10 +15,24 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   selectedFile 
 }) => {
   const handleFileSelect = async () => {
-    if (disabled || !window.electronAPI) return;
+    console.log('FilePicker: handleFileSelect called');
+    console.log('FilePicker: disabled =', disabled);
+    console.log('FilePicker: window.electronAPI =', window.electronAPI);
+    
+    if (disabled) {
+      console.log('FilePicker: Disabled, returning');
+      return;
+    }
+    
+    if (!window.electronAPI) {
+      console.error('FilePicker: electronAPI not available');
+      return;
+    }
     
     try {
+      console.log('FilePicker: Calling selectFile...');
       const file = await window.electronAPI.selectFile();
+      console.log('FilePicker: selectFile returned:', file);
       if (file) {
         onFileSelect(file);
       }

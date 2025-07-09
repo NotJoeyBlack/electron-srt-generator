@@ -2,7 +2,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { TranscriptionRequest, TranscriptionResponse, ProgressUpdate, FileInfo, AppConfig } from './types';
 
 const electronAPI = {
-  selectFile: (): Promise<FileInfo | null> => ipcRenderer.invoke('file:select'),
+  selectFile: (): Promise<FileInfo | null> => {
+    console.log('Preload: selectFile called');
+    return ipcRenderer.invoke('file:select');
+  },
   
   startTranscription: (request: TranscriptionRequest): Promise<void> => 
     ipcRenderer.invoke('transcription:start', request),
@@ -32,4 +35,6 @@ const electronAPI = {
     ipcRenderer.invoke('config:save', config)
 };
 
+console.log('Preload: Exposing electronAPI to main world');
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+console.log('Preload: electronAPI exposed successfully');

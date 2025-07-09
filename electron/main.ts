@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { spawn } from 'child_process';
 import { ConfigManager } from './utils/config';
 import { ErrorHandler } from './utils/errorHandler';
 import { ElevenLabsService } from './services/elevenlabs';
@@ -86,7 +87,9 @@ class MainProcess {
   }
 
   private async handleFileSelect(): Promise<FileInfo | null> {
+    console.log('Main: handleFileSelect called');
     try {
+      console.log('Main: Opening dialog...');
       const result = await dialog.showOpenDialog(this.mainWindow!, {
         properties: ['openFile'],
         filters: [
@@ -97,20 +100,28 @@ class MainProcess {
         ]
       });
 
+      console.log('Main: Dialog result:', result);
+
       if (result.canceled || result.filePaths.length === 0) {
+        console.log('Main: Dialog canceled or no file selected');
         return null;
       }
 
       const filePath = result.filePaths[0];
+      console.log('Main: Selected file path:', filePath);
       const stats = fs.statSync(filePath);
       
-      return {
+      const fileInfo = {
         name: path.basename(filePath),
         path: filePath,
         size: stats.size,
         type: path.extname(filePath)
       };
+      
+      console.log('Main: Returning file info:', fileInfo);
+      return fileInfo;
     } catch (error) {
+      console.error('Main: Error in handleFileSelect:', error);
       const errorInfo = ErrorHandler.getErrorInfo(error);
       this.sendError(errorInfo.message, errorInfo.troubleshooting);
       return null;
@@ -128,8 +139,43 @@ class MainProcess {
 
   private async handleShowInFolder(filePath: string): Promise<void> {
     try {
-      shell.showItemInFolder(filePath);
+      console.log('Main: handleShowInFolder called with:', filePath);
+      
+      // On Linux, try alternative methods if shell.showItemInFolder fails
+      if (process.platform === 'linux') {
+        const dirPath = path.dirname(filePath);
+        
+        // Use spawn with error handling
+        const tryCommand = (command: string, args: string[]): Promise<boolean> => {
+          return new Promise((resolve) => {
+            const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+            child.on('error', () => resolve(false));
+            child.on('spawn', () => {
+              child.unref();
+              resolve(true);
+            });
+          });
+        };
+        
+        // Try commands in order of preference
+        const success = await tryCommand('xdg-open', [dirPath]) ||
+                       await tryCommand('nautilus', [dirPath]) ||
+                       await tryCommand('dolphin', [dirPath]) ||
+                       await tryCommand('thunar', [dirPath]) ||
+                       await tryCommand('pcmanfm', [dirPath]);
+        
+        if (!success) {
+          // Last resort: try Electron's method
+          shell.showItemInFolder(filePath);
+        } else {
+          console.log('Main: Successfully opened folder on Linux');
+        }
+      } else {
+        // Use Electron's built-in method for Windows and macOS
+        shell.showItemInFolder(filePath);
+      }
     } catch (error) {
+      console.error('Main: Error in handleShowInFolder:', error);
       const errorInfo = ErrorHandler.getErrorInfo(error);
       this.sendError(errorInfo.message, errorInfo.troubleshooting);
     }
