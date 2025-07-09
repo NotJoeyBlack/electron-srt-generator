@@ -42,8 +42,8 @@ export class ErrorHandler {
 
     if (error.response?.status === 422) {
       return {
-        message: 'Unsupported file format',
-        troubleshooting: 'The file format is not supported. Please use MP3, MP4, WAV, M4A, MOV, AVI, FLV, MKV, or WEBM files.'
+        message: 'Invalid file or parameters',
+        troubleshooting: 'The file format may not be supported, the file may be corrupted, or the audio quality may be too low. Please try with a different file or check that your WAV file is not corrupted. Supported formats: MP3, MP4, WAV, M4A, MOV, AVI, FLV, MKV, WEBM.'
       };
     }
 

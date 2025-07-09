@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import App from './App';
 
 // Mock the electron API
@@ -24,37 +25,37 @@ Object.defineProperty(window, 'electronAPI', {
 });
 
 test('renders SRT Generator title', () => {
-  render(<App />);
-  const titleElement = screen.getByText(/SRT Generator/i);
+  const { getByText } = render(<App />);
+  const titleElement = getByText(/SRT Generator/i);
   expect(titleElement).toBeInTheDocument();
 });
 
 test('renders file upload section', () => {
-  render(<App />);
-  const uploadSection = screen.getByText(/Select Media File/i);
+  const { getByText } = render(<App />);
+  const uploadSection = getByText(/Select Media File/i);
   expect(uploadSection).toBeInTheDocument();
 });
 
 test('renders drag and drop zone', () => {
-  render(<App />);
-  const dragDropText = screen.getByText(/Drag & drop your media file here/i);
+  const { getByText } = render(<App />);
+  const dragDropText = getByText(/Drag & drop your media file here/i);
   expect(dragDropText).toBeInTheDocument();
 });
 
 test('renders settings button', () => {
-  render(<App />);
-  const settingsButton = screen.getByText(/Settings/i);
+  const { getByText } = render(<App />);
+  const settingsButton = getByText(/Settings/i);
   expect(settingsButton).toBeInTheDocument();
 });
 
 test('renders character limit component', () => {
-  render(<App />);
-  const characterLimitText = screen.getByText(/Character Limit/i);
+  const { getByText } = render(<App />);
+  const characterLimitText = getByText(/Character Limit/i);
   expect(characterLimitText).toBeInTheDocument();
 });
 
 test('renders generate SRT button', () => {
-  render(<App />);
-  const generateButton = screen.getByText(/Generate SRT/i);
+  const { getByText } = render(<App />);
+  const generateButton = getByText(/Generate SRT/i);
   expect(generateButton).toBeInTheDocument();
 });

@@ -46,16 +46,12 @@ export class ElevenLabsService {
     }
 
     const formData = new FormData();
-    formData.append('audio', fs.createReadStream(filePath));
-    formData.append('model', 'scribe_v1');
-    formData.append('language', 'en');
-    formData.append('response_format', 'verbose_json');
-    formData.append('enable_diarization', 'true');
-    formData.append('enable_word_timestamps', 'true');
-    
-    if (characterLimit && characterLimit > 0) {
-      formData.append('character_limit', characterLimit.toString());
-    }
+    formData.append('file', fs.createReadStream(filePath));
+    formData.append('model_id', 'scribe_v1');
+    formData.append('language_code', 'en');
+    formData.append('diarize', 'true');
+    formData.append('timestamps_granularity', 'word');
+    formData.append('tag_audio_events', 'true');
 
     try {
       const response = await axios.post(
@@ -95,7 +91,9 @@ export class ElevenLabsService {
         } else if (status === 413) {
           throw new Error('File too large. Please try with a smaller file.');
         } else if (status === 422) {
-          throw new Error('Unsupported file format or invalid parameters.');
+          // Include more detailed error information for debugging
+          const errorDetails = data?.detail || data?.message || 'Unknown validation error';
+          throw new Error(`Invalid parameters or file format: ${errorDetails}`);
         } else if (status >= 500) {
           throw new Error('ElevenLabs service is temporarily unavailable. Please try again later.');
         } else {
