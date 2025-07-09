@@ -1,0 +1,86 @@
+{
+  "name": "electron-srt-generator",
+  "version": "1.0.0",
+  "description": "Professional SRT subtitle generator desktop application",
+  "main": "dist/electron/main.js",
+  "homepage": "./",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:react\" \"npm run dev:electron\"",
+    "dev:react": "react-scripts start",
+    "dev:electron": "wait-on http://localhost:3000 && electron .",
+    "electron": "electron .",
+    "build": "react-scripts build && tsc -p electron/tsconfig.json",
+    "dist": "npm run build && electron-builder",
+    "pack": "electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps",
+    "test": "react-scripts test --watchAll=false",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["electron", "react", "typescript", "srt", "subtitles", "transcription"],
+  "author": "SRT Generator",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@mui/material": "^5.14.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.0",
+    "axios": "^1.5.0",
+    "electron-store": "^8.1.0",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.0",
+    "concurrently": "^8.2.0",
+    "wait-on": "^7.0.0",
+    "react-scripts": "5.0.1",
+    "typescript": "^4.9.5",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/node": "^20.5.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/user-event": "^14.4.3"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "build": {
+    "appId": "com.srtgenerator.app",
+    "productName": "SRT Generator",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "build/**/*",
+      "dist/electron/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
