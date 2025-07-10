@@ -19,10 +19,13 @@ interface ElevenLabsTranscriptionResponse {
     name: string;
   }>;
   words: Array<{
-    word: string;
+    text: string;
     start: number;
     end: number;
+    type: string;
     speaker_id?: string;
+    logprob?: number;
+    characters?: any;
   }>;
 }
 
@@ -73,8 +76,12 @@ export class ElevenLabsService {
       }
 
       // Validate response structure
-      if (!response.data.text || !response.data.words) {
-        throw new Error('Invalid response format from ElevenLabs API');
+      if (!response.data.text) {
+        throw new Error('Invalid response format from ElevenLabs API: missing text');
+      }
+      
+      if (!response.data.words) {
+        throw new Error('Invalid response format from ElevenLabs API: missing words');
       }
 
       return response.data;

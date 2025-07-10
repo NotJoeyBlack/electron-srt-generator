@@ -64,7 +64,12 @@ export class SRTProcessor {
     let subtitleIndex = 1;
 
     for (const word of words) {
-      const wordText = word.word || '';
+      // Skip spacing entries - they're just spaces between words
+      if (word.type === 'spacing') {
+        continue;
+      }
+      
+      const wordText = word.text || '';
       const wordStart = word.start || 0;
       const wordEnd = word.end || 0;
       const speakerId = word.speaker_id;
