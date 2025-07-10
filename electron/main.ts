@@ -87,9 +87,7 @@ class MainProcess {
   }
 
   private async handleFileSelect(): Promise<FileInfo | null> {
-    console.log('Main: handleFileSelect called');
     try {
-      console.log('Main: Opening dialog...');
       const result = await dialog.showOpenDialog(this.mainWindow!, {
         properties: ['openFile'],
         filters: [
@@ -100,28 +98,20 @@ class MainProcess {
         ]
       });
 
-      console.log('Main: Dialog result:', result);
-
       if (result.canceled || result.filePaths.length === 0) {
-        console.log('Main: Dialog canceled or no file selected');
         return null;
       }
 
       const filePath = result.filePaths[0];
-      console.log('Main: Selected file path:', filePath);
       const stats = fs.statSync(filePath);
       
-      const fileInfo = {
+      return {
         name: path.basename(filePath),
         path: filePath,
         size: stats.size,
         type: path.extname(filePath)
       };
-      
-      console.log('Main: Returning file info:', fileInfo);
-      return fileInfo;
     } catch (error) {
-      console.error('Main: Error in handleFileSelect:', error);
       const errorInfo = ErrorHandler.getErrorInfo(error);
       this.sendError(errorInfo.message, errorInfo.troubleshooting);
       return null;
@@ -139,8 +129,6 @@ class MainProcess {
 
   private async handleShowInFolder(filePath: string): Promise<void> {
     try {
-      console.log('Main: handleShowInFolder called with:', filePath);
-      
       // On Linux, try alternative methods if shell.showItemInFolder fails
       if (process.platform === 'linux') {
         const dirPath = path.dirname(filePath);
@@ -167,15 +155,12 @@ class MainProcess {
         if (!success) {
           // Last resort: try Electron's method
           shell.showItemInFolder(filePath);
-        } else {
-          console.log('Main: Successfully opened folder on Linux');
         }
       } else {
         // Use Electron's built-in method for Windows and macOS
         shell.showItemInFolder(filePath);
       }
     } catch (error) {
-      console.error('Main: Error in handleShowInFolder:', error);
       const errorInfo = ErrorHandler.getErrorInfo(error);
       this.sendError(errorInfo.message, errorInfo.troubleshooting);
     }
@@ -203,8 +188,7 @@ class MainProcess {
       });
 
       const transcriptionResult = await this.elevenLabsService.transcribeFile(
-        request.filePath,
-        request.characterLimit
+        request.filePath
       );
 
       // Stage 3: Processing transcription
@@ -223,7 +207,8 @@ class MainProcess {
 
       const srtPath = await this.srtProcessor.processSRT(
         transcriptionResult,
-        request.filePath
+        request.filePath,
+        request.characterLimit
       );
 
       // Stage 5: Complete

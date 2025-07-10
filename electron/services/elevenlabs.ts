@@ -34,7 +34,7 @@ export class ElevenLabsService {
     this.configManager = configManager;
   }
 
-  async transcribeFile(filePath: string, characterLimit: number): Promise<ElevenLabsTranscriptionResponse> {
+  async transcribeFile(filePath: string): Promise<ElevenLabsTranscriptionResponse> {
     const apiKey = this.configManager.getApiKey();
     
     if (!apiKey) {

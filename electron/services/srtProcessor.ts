@@ -20,13 +20,13 @@ export class SRTProcessor {
     this.fileProcessor = new FileProcessor(configManager);
   }
 
-  async processSRT(transcriptionData: any, inputFilePath: string): Promise<string> {
+  async processSRT(transcriptionData: any, inputFilePath: string, characterLimit: number = 50): Promise<string> {
     try {
       // Ensure output directory exists
       await this.fileProcessor.ensureOutputDirectory();
       
       // Generate SRT from transcription data
-      const srtContent = this.generateSRT(transcriptionData);
+      const srtContent = this.generateSRT(transcriptionData, characterLimit);
       
       // Apply timing adjustments
       const adjustedSRT = this.adjustTiming(srtContent);
@@ -43,7 +43,7 @@ export class SRTProcessor {
     }
   }
 
-  private generateSRT(transcriptionData: any): string {
+  private generateSRT(transcriptionData: any, characterLimit: number): string {
     const { words, speakers } = transcriptionData;
     
     if (!words || !Array.isArray(words)) {
@@ -73,7 +73,7 @@ export class SRTProcessor {
       const shouldStartNew = !currentSubtitle || 
         (speakerId && currentSubtitle.speaker !== speakerId) ||
         (wordStart - currentSubtitle.end > 2.0) || // 2 second gap
-        (currentSubtitle.text.length > 80); // Approximate character limit
+        (currentSubtitle.text.length > characterLimit); // User-configured character limit
 
       if (shouldStartNew) {
         // Finish current subtitle
