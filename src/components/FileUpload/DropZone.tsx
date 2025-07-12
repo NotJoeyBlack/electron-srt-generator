@@ -50,14 +50,14 @@ export const DropZone: React.FC<DropZoneProps> = ({
     }
   }, [disabled]);
 
-  const validateFile = (file: File): boolean => {
+  const validateFile = useCallback((file: File): boolean => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
     console.log('Validating file:', file.name, 'Extension:', extension);
     console.log('Supported formats:', supportedFormats);
     const isValid = supportedFormats.includes(extension);
     console.log('File validation result:', isValid);
     return isValid;
-  };
+  }, [supportedFormats]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     console.log('handleDrop called');
@@ -106,7 +106,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
     
     console.log('Calling onFileSelect with:', fileInfo);
     onFileSelect(fileInfo);
-  }, [disabled, onFileSelect, supportedFormats, onError, validateFile]);
+  }, [disabled, onFileSelect, onError, validateFile, supportedFormats]);
 
   const formatList = supportedFormats.map(format => format.toUpperCase().replace('.', '')).join(', ');
 

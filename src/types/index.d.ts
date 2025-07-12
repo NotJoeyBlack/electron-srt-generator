@@ -25,6 +25,25 @@ export interface AppConfig {
     supported_formats: string[];
     output_directory: string;
 }
+export interface UpdateStatus {
+    checking: boolean;
+    available: boolean;
+    downloading: boolean;
+    downloaded: boolean;
+    error?: string;
+    info?: {
+        version: string;
+        releaseDate: string;
+        releaseName?: string;
+        releaseNotes?: string;
+    };
+    progress?: {
+        bytesPerSecond: number;
+        percent: number;
+        transferred: number;
+        total: number;
+    };
+}
 export interface ElectronAPI {
     selectFile: () => Promise<FileInfo | null>;
     startTranscription: (request: TranscriptionRequest) => Promise<void>;
@@ -35,6 +54,11 @@ export interface ElectronAPI {
     showItemInFolder: (filePath: string) => Promise<void>;
     getConfig: () => Promise<AppConfig>;
     saveConfig: (config: Partial<AppConfig>) => Promise<void>;
+    checkForUpdates: () => Promise<void>;
+    downloadUpdate: () => Promise<void>;
+    installUpdate: () => Promise<void>;
+    getUpdateStatus: () => Promise<UpdateStatus>;
+    onUpdateStatus: (callback: (status: UpdateStatus) => void) => void;
 }
 declare global {
     interface Window {

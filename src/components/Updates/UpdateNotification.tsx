@@ -49,7 +49,7 @@ const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onUpdateAction 
   const [notificationType, setNotificationType] = useState<'available' | 'downloaded' | 'error'>('available');
 
   useEffect(() => {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
     electronAPI.onUpdateStatus((status: UpdateStatus) => {
@@ -76,7 +76,7 @@ const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onUpdateAction 
   }, []);
 
   const handleDownload = async () => {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
     try {
@@ -89,7 +89,7 @@ const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onUpdateAction 
   };
 
   const handleInstall = async () => {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
     try {

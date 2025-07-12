@@ -111,7 +111,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       return (
         <FallbackComponent
           error={this.state.error}
-          errorInfo={this.state.errorInfo!}
+          errorInfo={this.state.errorInfo as React.ErrorInfo}
           resetError={this.resetError}
         />
       );
@@ -123,7 +123,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
 // Hook for functional components to handle errors
 export const useErrorHandler = () => {
-  const handleError = React.useCallback((error: Error, errorInfo?: any) => {
+  const handleError = React.useCallback((error: Error, errorInfo?: React.ErrorInfo) => {
     console.error('Error caught by useErrorHandler:', error, errorInfo);
     
     // Send error to main process for logging

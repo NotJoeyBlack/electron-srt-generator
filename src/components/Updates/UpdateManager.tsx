@@ -60,7 +60,7 @@ const UpdateManager: React.FC<UpdateManagerProps> = ({ onUpdateInstall }) => {
   const [showUpdateDownloaded, setShowUpdateDownloaded] = useState(false);
 
   useEffect(() => {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
     // Listen for update status changes
@@ -85,7 +85,7 @@ const UpdateManager: React.FC<UpdateManagerProps> = ({ onUpdateInstall }) => {
   }, []);
 
   const handleCheckForUpdates = async () => {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
     try {
@@ -97,7 +97,7 @@ const UpdateManager: React.FC<UpdateManagerProps> = ({ onUpdateInstall }) => {
   };
 
   const handleDownloadUpdate = async () => {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
     try {
@@ -109,7 +109,7 @@ const UpdateManager: React.FC<UpdateManagerProps> = ({ onUpdateInstall }) => {
   };
 
   const handleInstallUpdate = async () => {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
     try {
@@ -190,7 +190,7 @@ const UpdateManager: React.FC<UpdateManagerProps> = ({ onUpdateInstall }) => {
       <Chip
         icon={getStatusIcon()}
         label={getStatusText()}
-        color={getStatusColor() as any}
+        color={getStatusColor() as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
         size="small"
         sx={{ ml: 1 }}
       />

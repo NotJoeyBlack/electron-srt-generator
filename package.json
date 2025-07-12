@@ -101,6 +101,9 @@
       "dist/electron/**/*",
       "node_modules/**/*"
     ],
+    "extraMetadata": {
+      "main": "dist/electron/main.js"
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "target": {
@@ -112,8 +115,7 @@
       }
     },
     "win": {
-      "target": "nsis",
-      "publisherName": "SRT Generator"
+      "target": "nsis"
     },
     "linux": {
       "target": "AppImage",

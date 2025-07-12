@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog } from 'electron';
-import { autoUpdater } from 'electron-updater';
+import { autoUpdater, UpdateInfo as ElectronUpdaterInfo, ProgressInfo } from 'electron-updater';
 import log from 'electron-log';
 import * as path from 'path';
 
@@ -74,7 +74,7 @@ export class UpdateManager {
     });
 
     // Update available
-    autoUpdater.on('update-available', (info) => {
+    autoUpdater.on('update-available', (info: ElectronUpdaterInfo) => {
       log.info('Update available:', info);
       this.updateStatus.checking = false;
       this.updateStatus.available = true;
@@ -89,7 +89,7 @@ export class UpdateManager {
     });
 
     // No update available
-    autoUpdater.on('update-not-available', (info) => {
+    autoUpdater.on('update-not-available', (info: ElectronUpdaterInfo) => {
       log.info('Update not available:', info);
       this.updateStatus.checking = false;
       this.updateStatus.available = false;
@@ -97,7 +97,7 @@ export class UpdateManager {
     });
 
     // Update error
-    autoUpdater.on('error', (error) => {
+    autoUpdater.on('error', (error: Error) => {
       log.error('Update error:', error);
       this.updateStatus.checking = false;
       this.updateStatus.downloading = false;
@@ -107,7 +107,7 @@ export class UpdateManager {
     });
 
     // Download progress
-    autoUpdater.on('download-progress', (progressObj) => {
+    autoUpdater.on('download-progress', (progressObj: ProgressInfo) => {
       log.info('Download progress:', progressObj);
       this.updateStatus.downloading = true;
       this.updateStatus.progress = {
@@ -120,7 +120,7 @@ export class UpdateManager {
     });
 
     // Update downloaded
-    autoUpdater.on('update-downloaded', (info) => {
+    autoUpdater.on('update-downloaded', (info: ElectronUpdaterInfo) => {
       log.info('Update downloaded:', info);
       this.updateStatus.downloading = false;
       this.updateStatus.downloaded = true;
@@ -171,7 +171,7 @@ export class UpdateManager {
     }
   }
 
-  private showUpdateAvailableDialog(info: any): void {
+  private showUpdateAvailableDialog(info: ElectronUpdaterInfo): void {
     if (!this.mainWindow) return;
 
     const message = `A new version (${info.version}) is available!\n\nWould you like to download it now?`;
@@ -180,7 +180,7 @@ export class UpdateManager {
       type: 'info',
       title: 'Update Available',
       message,
-      detail: info.releaseNotes || 'No release notes available.',
+      detail: typeof info.releaseNotes === 'string' ? info.releaseNotes : 'No release notes available.',
       buttons: ['Download Now', 'Later', 'Skip This Version'],
       defaultId: 0,
       cancelId: 1
@@ -194,7 +194,7 @@ export class UpdateManager {
     });
   }
 
-  private showUpdateDownloadedDialog(info: any): void {
+  private showUpdateDownloadedDialog(info: ElectronUpdaterInfo): void {
     if (!this.mainWindow) return;
 
     const message = `Update (${info.version}) has been downloaded!\n\nRestart now to apply the update?`;
