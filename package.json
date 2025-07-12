@@ -92,7 +92,7 @@
   },
   "build": {
     "appId": "com.srtgenerator.app",
-    "productName": "SRT Generator",
+    "productName": "SRT-Generator",
     "directories": {
       "output": "release"
     },

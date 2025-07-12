@@ -25,21 +25,27 @@ export class PathValidator {
    */
   static isValidFilePath(filePath: string, allowedExtensions?: string[]): boolean {
     try {
+      console.log('[PathValidator] Validating file path:', filePath);
+      
       // Resolve the path to handle any relative paths or symlinks
       const resolvedPath = path.resolve(filePath);
+      console.log('[PathValidator] Resolved path:', resolvedPath);
       
       // Check if path contains null bytes (security vulnerability)
       if (filePath.includes('\0')) {
+        console.log('[PathValidator] REJECTED: Contains null bytes');
         return false;
       }
       
       // Check if path contains path traversal patterns
       if (this.containsPathTraversal(filePath)) {
+        console.log('[PathValidator] REJECTED: Contains path traversal patterns');
         return false;
       }
       
       // Check if the resolved path is within allowed directories
       if (!this.isWithinAllowedDirectories(resolvedPath)) {
+        console.log('[PathValidator] REJECTED: Not within allowed directories');
         return false;
       }
       
@@ -47,13 +53,16 @@ export class PathValidator {
       if (allowedExtensions && allowedExtensions.length > 0) {
         const ext = path.extname(filePath).toLowerCase();
         if (!allowedExtensions.includes(ext)) {
+          console.log('[PathValidator] REJECTED: Invalid extension:', ext, 'Allowed:', allowedExtensions);
           return false;
         }
       }
       
+      console.log('[PathValidator] ACCEPTED: File path is valid');
       return true;
     } catch (error) {
       // Any error during validation means the path is invalid
+      console.log('[PathValidator] REJECTED: Error during validation:', error);
       return false;
     }
   }
@@ -186,10 +195,41 @@ export class PathValidator {
    * Checks if path is within allowed directories
    */
   private static isWithinAllowedDirectories(resolvedPath: string): boolean {
-    return this.ALLOWED_DIRECTORIES.some(allowedDir => {
-      const normalizedAllowed = path.normalize(allowedDir);
-      const normalizedResolved = path.normalize(resolvedPath);
-      return normalizedResolved.startsWith(normalizedAllowed);
+    console.log('[PathValidator] Checking allowed directories for:', resolvedPath);
+    console.log('[PathValidator] Allowed directories:', this.ALLOWED_DIRECTORIES);
+    
+    const result = this.ALLOWED_DIRECTORIES.some(allowedDir => {
+      try {
+        // Resolve both paths to handle any symlinks or relative paths
+        const normalizedAllowed = path.resolve(path.normalize(allowedDir));
+        const normalizedResolved = path.resolve(path.normalize(resolvedPath));
+        
+        // Convert to lowercase for case-insensitive comparison on Windows
+        const allowedLower = normalizedAllowed.toLowerCase();
+        const resolvedLower = normalizedResolved.toLowerCase();
+        
+        // Check if the resolved path starts with the allowed directory
+        // Add path separator to ensure we're checking directory boundaries
+        const allowedWithSep = allowedLower.endsWith(path.sep) ? allowedLower : allowedLower + path.sep;
+        const resolvedWithSep = resolvedLower + path.sep;
+        
+        const isWithin = resolvedWithSep.startsWith(allowedWithSep) || resolvedLower === allowedLower;
+        
+        console.log('[PathValidator] Comparing:');
+        console.log('  Allowed (normalized):', normalizedAllowed);
+        console.log('  Resolved (normalized):', normalizedResolved);
+        console.log('  Allowed (with sep):', allowedWithSep);
+        console.log('  Resolved (with sep):', resolvedWithSep);
+        console.log('  Is within?', isWithin);
+        
+        return isWithin;
+      } catch (error) {
+        console.log('[PathValidator] Error comparing paths:', error);
+        return false;
+      }
     });
+    
+    console.log('[PathValidator] Final result for directory check:', result);
+    return result;
   }
 }
