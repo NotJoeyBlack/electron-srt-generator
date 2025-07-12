@@ -1,6 +1,6 @@
 {
   "name": "electron-srt-generator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Professional SRT subtitle generator desktop application",
   "main": "dist/electron/main.js",
   "homepage": "./",
