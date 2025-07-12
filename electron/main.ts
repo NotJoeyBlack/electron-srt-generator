@@ -24,7 +24,7 @@ class MainProcess {
     this.elevenLabsService = new ElevenLabsService(this.configManager);
     this.fileProcessor = new FileProcessor(this.configManager);
     this.srtProcessor = new SRTProcessor(this.configManager);
-    this.updateManager = new UpdateManager(this.configManager);
+    this.updateManager = new UpdateManager();
     
     this.initializeApp();
     this.registerIpcHandlers();

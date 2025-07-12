@@ -19,6 +19,9 @@ npm run build
 # Create distributable packages
 npm run dist
 
+# Create distributable packages with GitHub token for auto-updates
+GITHUB_TOKEN=your_github_token_here npm run dist
+
 # Type checking
 npm run typecheck
 
@@ -157,3 +160,29 @@ npm test -- --coverage  # Run with coverage
 - Configured in `package.json` build section
 - Includes proper file patterns and signing setup
 - Supports app auto-updater integration
+
+## Auto-Updates
+
+### GitHub Token Setup for Private Repository
+The app supports automatic updates from private GitHub repositories. To enable this:
+
+1. **Create GitHub Personal Access Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens
+   - Create token with `repo` permissions
+   - Copy the token (starts with `ghp_`)
+
+2. **Build with Token (Recommended)**:
+   ```bash
+   GITHUB_TOKEN=ghp_your_token_here npm run dist
+   ```
+
+3. **Alternative: Hardcode Token**:
+   - Edit `electron/services/updateManager.ts`
+   - Replace `'ghp_REPLACE_WITH_YOUR_GITHUB_TOKEN'` with your actual token
+   - **Security Note**: Token will be embedded in the compiled app
+
+### Auto-Update Behavior
+- Checks for updates 5 seconds after app startup (production only)
+- Downloads updates in background when available
+- Prompts user to install when download complete
+- Works automatically for all distributed copies (no user configuration needed)
