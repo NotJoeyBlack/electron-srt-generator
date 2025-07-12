@@ -10,13 +10,15 @@ const DEFAULT_CONFIG: AppConfig = {
   elevenlabs_api_key: '',
   default_char_limit: 30,
   supported_formats: ['.mp3', '.mp4', '.wav', '.m4a', '.mov', '.avi', '.flv', '.mkv', '.webm'],
-  output_directory: path.join(app.getPath('documents'), 'SRT Generator Output')
+  output_directory: path.join(app.getPath('documents'), 'SRT Generator Output'),
+  github_token: ''
 };
 
 export class ConfigManager {
   private config: AppConfig;
   private masterKey: Buffer;
   private static readonly API_KEY_STORAGE_KEY = 'elevenlabs_api_key';
+  private static readonly GITHUB_TOKEN_STORAGE_KEY = 'github_token';
 
   constructor() {
     this.masterKey = SecureStorage.generateMasterKey();
@@ -46,6 +48,16 @@ export class ConfigManager {
       
       if (secureApiKey) {
         config.elevenlabs_api_key = secureApiKey;
+      }
+      
+      // Load GitHub token from secure storage
+      const secureGithubToken = SecureStorage.retrieveSecureValue(
+        ConfigManager.GITHUB_TOKEN_STORAGE_KEY,
+        this.masterKey
+      );
+      
+      if (secureGithubToken) {
+        config.github_token = secureGithubToken;
       }
       
       return config;
@@ -78,6 +90,16 @@ export class ConfigManager {
       
       if (secureApiKey) {
         config.elevenlabs_api_key = secureApiKey;
+      }
+      
+      // Load GitHub token from secure storage
+      const secureGithubToken = SecureStorage.retrieveSecureValue(
+        ConfigManager.GITHUB_TOKEN_STORAGE_KEY,
+        this.masterKey
+      );
+      
+      if (secureGithubToken) {
+        config.github_token = secureGithubToken;
       }
       
       return config;
@@ -121,8 +143,24 @@ export class ConfigManager {
         }
       }
       
-      // Remove API key from regular config file
+      // Handle GitHub token securely
+      if (updates.github_token !== undefined) {
+        if (updates.github_token.trim() === '') {
+          // Remove GitHub token if empty
+          SecureStorage.removeSecureValue(ConfigManager.GITHUB_TOKEN_STORAGE_KEY);
+        } else {
+          // Store GitHub token securely
+          SecureStorage.storeSecureValue(
+            ConfigManager.GITHUB_TOKEN_STORAGE_KEY,
+            updates.github_token,
+            this.masterKey
+          );
+        }
+      }
+      
+      // Remove sensitive data from regular config file
       delete (configToSave as any).elevenlabs_api_key;
+      delete (configToSave as any).github_token;
       
       console.log('Writing config to file...');
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
@@ -168,8 +206,24 @@ export class ConfigManager {
         }
       }
       
-      // Remove API key from regular config file
+      // Handle GitHub token securely
+      if (updates.github_token !== undefined) {
+        if (updates.github_token.trim() === '') {
+          // Remove GitHub token if empty
+          SecureStorage.removeSecureValue(ConfigManager.GITHUB_TOKEN_STORAGE_KEY);
+        } else {
+          // Store GitHub token securely
+          SecureStorage.storeSecureValue(
+            ConfigManager.GITHUB_TOKEN_STORAGE_KEY,
+            updates.github_token,
+            this.masterKey
+          );
+        }
+      }
+      
+      // Remove sensitive data from regular config file
       delete (configToSave as any).elevenlabs_api_key;
+      delete (configToSave as any).github_token;
       
       console.log('Writing config to file...');
       await fs.promises.writeFile(CONFIG_FILE, JSON.stringify(configToSave, null, 2));

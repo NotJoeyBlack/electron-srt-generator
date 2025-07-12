@@ -28,6 +28,7 @@ export interface AppConfig {
   default_char_limit: number;
   supported_formats: string[];
   output_directory: string;
+  github_token?: string;
 }
 
 export interface UpdateStatus {

@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog } from 'electron';
 import { autoUpdater, UpdateInfo as ElectronUpdaterInfo, ProgressInfo } from 'electron-updater';
 import log from 'electron-log';
 import * as path from 'path';
+import { ConfigManager } from '../utils/config';
 
 export interface UpdateInfo {
   version: string;
@@ -29,6 +30,7 @@ export interface UpdateStatus {
 
 export class UpdateManager {
   private mainWindow: BrowserWindow | null = null;
+  private configManager: ConfigManager;
   private updateStatus: UpdateStatus = {
     checking: false,
     available: false,
@@ -36,7 +38,8 @@ export class UpdateManager {
     downloaded: false
   };
 
-  constructor() {
+  constructor(configManager: ConfigManager) {
+    this.configManager = configManager;
     this.setupUpdater();
     this.setupEventListeners();
   }
@@ -48,14 +51,25 @@ export class UpdateManager {
       (autoUpdater.logger as any).transports.file.level = 'info';
     }
     
+    // Get GitHub token from config
+    const config = this.configManager.getConfig();
+    const githubToken = config.github_token;
+    
     // Set update server URL (GitHub Releases)
-    autoUpdater.setFeedURL({
+    const feedURL: any = {
       provider: 'github',
       owner: 'notjoeyblack', // Replace with your GitHub username
       repo: 'electron-srt-generator', // Replace with your repo name
-      private: false,
+      private: true,
       releaseType: 'release'
-    });
+    };
+    
+    // Add token if available
+    if (githubToken) {
+      feedURL.token = githubToken;
+    }
+    
+    autoUpdater.setFeedURL(feedURL);
 
     // Configure update behavior
     autoUpdater.autoDownload = false; // We'll handle download manually
@@ -101,9 +115,23 @@ export class UpdateManager {
       log.error('Update error:', error);
       this.updateStatus.checking = false;
       this.updateStatus.downloading = false;
-      this.updateStatus.error = error.message;
+      
+      // Provide helpful error messages for common issues
+      let errorMessage = error.message;
+      if (error.message.includes('404')) {
+        const config = this.configManager.getConfig();
+        if (!config.github_token) {
+          errorMessage = 'Cannot access private repository. Please configure a GitHub token in Settings.';
+        } else {
+          errorMessage = 'Repository or release not found. Check if the release v' + require('../../package.json').version + ' exists.';
+        }
+      } else if (error.message.includes('403')) {
+        errorMessage = 'Access denied. Please check your GitHub token permissions.';
+      }
+      
+      this.updateStatus.error = errorMessage;
       this.sendUpdateStatus();
-      this.showUpdateErrorDialog(error);
+      this.showUpdateErrorDialog(new Error(errorMessage));
     });
 
     // Download progress
@@ -230,7 +258,13 @@ export class UpdateManager {
   public scheduleAutoCheck(): void {
     setTimeout(() => {
       if (app.isPackaged) { // Only check in production
-        this.checkForUpdates();
+        const config = this.configManager.getConfig();
+        // Only auto-check if GitHub token is configured for private repo
+        if (config.github_token) {
+          this.checkForUpdates();
+        } else {
+          log.info('Skipping auto-update check: GitHub token not configured for private repository');
+        }
       }
     }, 5000); // Check 5 seconds after startup
   }
