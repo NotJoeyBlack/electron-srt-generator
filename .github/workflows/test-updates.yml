@@ -1,0 +1,336 @@
+name: Update System Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of test to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'unit'
+          - 'integration'
+          - 'e2e'
+          - 'performance'
+
+jobs:
+  test-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      test-matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set test matrix
+        id: set-matrix
+        run: |
+          if [ "${{ github.event.inputs.test_type }}" == "unit" ]; then
+            echo "matrix={\"test-type\":[\"unit\"]}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.test_type }}" == "integration" ]; then
+            echo "matrix={\"test-type\":[\"integration\"]}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.test_type }}" == "e2e" ]; then
+            echo "matrix={\"test-type\":[\"e2e\"]}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.test_type }}" == "performance" ]; then
+            echo "matrix={\"test-type\":[\"performance\"]}" >> $GITHUB_OUTPUT
+          else
+            echo "matrix={\"test-type\":[\"unit\",\"integration\",\"e2e\",\"performance\"]}" >> $GITHUB_OUTPUT
+          fi
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: test-setup
+    if: contains(fromJson(needs.test-setup.outputs.test-matrix).test-type, 'unit')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run unit tests
+        run: npm run test -- --testPathPattern="UpdateManager.test.ts" --verbose
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: |
+            coverage/
+            test-results/
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: test-setup
+    if: contains(fromJson(needs.test-setup.outputs.test-matrix).test-type, 'integration')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run integration tests
+        run: npm run test -- --testPathPattern="integration.test.js" --verbose
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            test-reports/
+            test-data/
+
+  e2e-tests:
+    runs-on: ${{ matrix.os }}
+    needs: test-setup
+    if: contains(fromJson(needs.test-setup.outputs.test-matrix).test-type, 'e2e')
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      
+      - name: Build application
+        run: npm run build
+      
+      - name: Run E2E tests
+        run: npm run test -- --testPathPattern="e2e.test.js" --verbose
+        env:
+          DISPLAY: ':99'
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results-${{ matrix.os }}
+          path: |
+            test-results/
+            screenshots/
+            videos/
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: test-setup
+    if: contains(fromJson(needs.test-setup.outputs.test-matrix).test-type, 'performance')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run performance tests
+        run: node scripts/run-update-tests.js
+      
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: |
+            update-test-report.json
+            performance-metrics.json
+
+  comprehensive-test:
+    runs-on: ubuntu-latest
+    needs: test-setup
+    if: contains(fromJson(needs.test-setup.outputs.test-matrix).test-type, 'all') || github.event.schedule
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      
+      - name: Build application
+        run: npm run build
+      
+      - name: Run comprehensive test suite
+        run: node scripts/run-update-tests.js
+      
+      - name: Run Jest tests
+        run: npm run test -- --testPathPattern="__tests__/update-system" --verbose
+      
+      - name: Generate test report
+        if: always()
+        run: |
+          echo "## Update System Test Report" > test-summary.md
+          echo "### Test Execution Summary" >> test-summary.md
+          echo "- **Date**: $(date)" >> test-summary.md
+          echo "- **Commit**: ${{ github.sha }}" >> test-summary.md
+          echo "- **Branch**: ${{ github.ref_name }}" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          if [ -f "update-test-report.json" ]; then
+            echo "### Automated Test Results" >> test-summary.md
+            node -e "
+              const report = require('./update-test-report.json');
+              console.log('- **Total Tests**: ' + report.summary.total);
+              console.log('- **Passed**: ' + report.summary.passed);
+              console.log('- **Failed**: ' + report.summary.failed);
+              console.log('- **Success Rate**: ' + report.summary.successRate.toFixed(1) + '%');
+              console.log('- **Total Time**: ' + report.summary.totalTime + 'ms');
+            " >> test-summary.md
+          fi
+      
+      - name: Upload comprehensive results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-test-results
+          path: |
+            update-test-report.json
+            test-summary.md
+            test-results/
+            test-reports/
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = '## 🧪 Update System Test Results\n\n';
+            
+            if (fs.existsSync('test-summary.md')) {
+              const summary = fs.readFileSync('test-summary.md', 'utf8');
+              comment += summary;
+            } else {
+              comment += 'Test results not available. Please check the workflow logs for details.';
+            }
+            
+            // Check if comprehensive test passed
+            const testPassed = process.env.GITHUB_JOB_STATUS === 'success';
+            comment += '\n\n';
+            comment += testPassed ? '✅ All tests passed!' : '❌ Some tests failed. Please review the results.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, performance-tests, comprehensive-test]
+    if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
+    
+    steps:
+      - name: Notify on failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const failedJobs = [];
+            
+            if ('${{ needs.unit-tests.result }}' === 'failure') failedJobs.push('Unit Tests');
+            if ('${{ needs.integration-tests.result }}' === 'failure') failedJobs.push('Integration Tests');
+            if ('${{ needs.e2e-tests.result }}' === 'failure') failedJobs.push('E2E Tests');
+            if ('${{ needs.performance-tests.result }}' === 'failure') failedJobs.push('Performance Tests');
+            if ('${{ needs.comprehensive-test.result }}' === 'failure') failedJobs.push('Comprehensive Test');
+            
+            const title = '🚨 Update System Tests Failed';
+            const body = `The following test jobs failed:
+            
+            ${failedJobs.map(job => `- ${job}`).join('\n')}
+            
+            **Branch**: ${{ github.ref_name }}
+            **Commit**: ${{ github.sha }}
+            **Workflow**: ${{ github.workflow }}
+            **Run**: ${{ github.run_id }}
+            
+            Please investigate and fix the failing tests.`;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'testing', 'urgent']
+            });
+
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, performance-tests, comprehensive-test]
+    if: always()
+    
+    steps:
+      - name: Clean up old test artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
+            
+            // Keep only the most recent 10 artifacts
+            const oldArtifacts = artifacts.data.artifacts.slice(10);
+            
+            for (const artifact of oldArtifacts) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id
+              });
+            }

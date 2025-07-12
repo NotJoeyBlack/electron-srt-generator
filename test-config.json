@@ -1,0 +1,39 @@
+{
+  "testEnvironment": {
+    "mockApiPort": 3001,
+    "mockApiUrl": "http://localhost:3001",
+    "testDataDir": "./test-data",
+    "reportDir": "./test-reports",
+    "logLevel": "info",
+    "timeout": 30000
+  },
+  "authentication": {
+    "githubToken": "ghp_f9c06ea8224eb78a61859489b074a10730a249be",
+    "githubUsername": "notjoeyblack",
+    "githubRepo": "electron-srt-generator",
+    "useRealGitHub": false
+  },
+  "security": {
+    "verifySignatures": false,
+    "allowInsecureConnections": true,
+    "trustedHosts": [
+      "localhost",
+      "127.0.0.1"
+    ],
+    "certificatePath": "./test-keys/test-cert.pem"
+  },
+  "platforms": {
+    "windows": {
+      "enabled": true,
+      "installer": "nsis"
+    },
+    "macos": {
+      "enabled": true,
+      "installer": "dmg"
+    },
+    "linux": {
+      "enabled": true,
+      "installer": "AppImage"
+    }
+  }
+}

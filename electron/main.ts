@@ -4,9 +4,11 @@ import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { ConfigManager } from './utils/config';
 import { ErrorHandler } from './utils/errorHandler';
+import { PathValidator } from './utils/pathValidator';
 import { ElevenLabsService } from './services/elevenlabs';
 import { FileProcessor } from './services/fileProcessor';
 import { SRTProcessor } from './services/srtProcessor';
+import { UpdateManager } from './services/updateManager';
 import { TranscriptionRequest, FileInfo, AppConfig } from './types';
 
 class MainProcess {
@@ -15,12 +17,14 @@ class MainProcess {
   private elevenLabsService: ElevenLabsService;
   private fileProcessor: FileProcessor;
   private srtProcessor: SRTProcessor;
+  private updateManager: UpdateManager;
 
   constructor() {
     this.configManager = new ConfigManager();
     this.elevenLabsService = new ElevenLabsService(this.configManager);
     this.fileProcessor = new FileProcessor(this.configManager);
     this.srtProcessor = new SRTProcessor(this.configManager);
+    this.updateManager = new UpdateManager();
     
     this.initializeApp();
     this.registerIpcHandlers();
@@ -70,6 +74,12 @@ class MainProcess {
 
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow?.show();
+      
+      // Set up update manager with the main window
+      this.updateManager.setMainWindow(this.mainWindow!);
+      
+      // Schedule automatic update check
+      this.updateManager.scheduleAutoCheck();
     });
 
     this.mainWindow.on('closed', () => {
@@ -84,6 +94,12 @@ class MainProcess {
     ipcMain.handle('transcription:start', (_event, request: TranscriptionRequest) => this.handleTranscriptionStart(request));
     ipcMain.handle('config:get', (_event) => this.handleGetConfig());
     ipcMain.handle('config:save', (_event, config: Partial<AppConfig>) => this.handleSaveConfig(config));
+    
+    // Update-related handlers
+    ipcMain.handle('update:check', (_event) => this.handleUpdateCheck());
+    ipcMain.handle('update:download', (_event) => this.handleUpdateDownload());
+    ipcMain.handle('update:install', (_event) => this.handleUpdateInstall());
+    ipcMain.handle('update:get-status', (_event) => this.handleGetUpdateStatus());
   }
 
   private async handleFileSelect(): Promise<FileInfo | null> {
@@ -103,6 +119,12 @@ class MainProcess {
       }
 
       const filePath = result.filePaths[0];
+      
+      // Validate file path for security
+      if (!PathValidator.isValidFilePath(filePath)) {
+        throw new Error('Invalid file path or file location not allowed');
+      }
+      
       const stats = fs.statSync(filePath);
       
       return {
@@ -120,6 +142,11 @@ class MainProcess {
 
   private async handleFileOpen(filePath: string): Promise<void> {
     try {
+      // Validate file path for security
+      if (!PathValidator.isValidFilePath(filePath)) {
+        throw new Error('Invalid file path or file location not allowed');
+      }
+      
       await shell.openPath(filePath);
     } catch (error) {
       const errorInfo = ErrorHandler.getErrorInfo(error);
@@ -129,9 +156,19 @@ class MainProcess {
 
   private async handleShowInFolder(filePath: string): Promise<void> {
     try {
+      // Validate file path for security
+      if (!PathValidator.isValidFilePath(filePath)) {
+        throw new Error('Invalid file path or file location not allowed');
+      }
+      
       // On Linux, try alternative methods if shell.showItemInFolder fails
       if (process.platform === 'linux') {
         const dirPath = path.dirname(filePath);
+        
+        // Validate directory path as well
+        if (!PathValidator.isValidDirectoryPath(dirPath)) {
+          throw new Error('Invalid directory path or directory location not allowed');
+        }
         
         // Use spawn with error handling
         const tryCommand = (command: string, args: string[]): Promise<boolean> => {
@@ -254,6 +291,23 @@ class MainProcess {
 
   private sendError(message: string, troubleshooting?: string): void {
     this.mainWindow?.webContents.send('transcription:error', message, troubleshooting);
+  }
+
+  // Update-related handlers
+  private async handleUpdateCheck(): Promise<void> {
+    await this.updateManager.checkForUpdates();
+  }
+
+  private async handleUpdateDownload(): Promise<void> {
+    await this.updateManager.downloadUpdate();
+  }
+
+  private handleUpdateInstall(): void {
+    this.updateManager.quitAndInstall();
+  }
+
+  private handleGetUpdateStatus(): any {
+    return this.updateManager.getUpdateStatus();
   }
 }
 

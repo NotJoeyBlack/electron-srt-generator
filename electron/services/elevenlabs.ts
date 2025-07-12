@@ -48,15 +48,25 @@ export class ElevenLabsService {
       throw new Error('File not found');
     }
 
-    const formData = new FormData();
-    formData.append('file', fs.createReadStream(filePath));
-    formData.append('model_id', 'scribe_v1');
-    formData.append('language_code', 'en');
-    formData.append('diarize', 'true');
-    formData.append('timestamps_granularity', 'word');
-    formData.append('tag_audio_events', 'true');
+    // Create file stream with proper cleanup
+    const fileStream = fs.createReadStream(filePath);
+    
+    // Set up error handling and cleanup for the stream
+    const cleanupStream = () => {
+      if (fileStream && !fileStream.destroyed) {
+        fileStream.destroy();
+      }
+    };
 
     try {
+      const formData = new FormData();
+      formData.append('file', fileStream);
+      formData.append('model_id', 'scribe_v1');
+      formData.append('language_code', 'en');
+      formData.append('diarize', 'true');
+      formData.append('timestamps_granularity', 'word');
+      formData.append('tag_audio_events', 'true');
+
       const response = await axios.post(
         `${this.baseUrl}/speech-to-text`,
         formData,
@@ -70,6 +80,9 @@ export class ElevenLabsService {
           maxBodyLength: Infinity
         }
       );
+
+      // Clean up the stream after successful upload
+      cleanupStream();
 
       if (!response.data) {
         throw new Error('Empty response from ElevenLabs API');
@@ -86,6 +99,8 @@ export class ElevenLabsService {
 
       return response.data;
     } catch (error: any) {
+      // Ensure stream is cleaned up on error
+      cleanupStream();
       if (error.response) {
         // API responded with an error
         const status = error.response.status;

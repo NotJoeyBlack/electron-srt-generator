@@ -26,10 +26,12 @@ import { FilePicker } from './components/FileUpload/FilePicker';
 import { CharacterLimit } from './components/Settings/CharacterLimit';
 import { TranscriptionProgress } from './components/Progress/TranscriptionProgress';
 import { ResultsDisplay } from './components/Results/ResultsDisplay';
+import { UpdateNotification } from './components/Updates';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useTranscription } from './hooks/useTranscription';
 import { IPCService } from './services/ipc';
 import { AppConfig } from './types';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 function App() {
@@ -170,182 +172,202 @@ function App() {
   const canStartTranscription = fileUpload.selectedFile && !isProcessing && config?.elevenlabs_api_key;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <Container maxWidth="lg" sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 2 }}>
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Subtitles sx={{ fontSize: 40, color: 'primary.main' }} />
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                SRT Generator
-              </Typography>
-              <Typography variant="subtitle1" color="text.secondary">
-                Professional subtitle generation powered by ElevenLabs
-              </Typography>
+    <ErrorBoundary>
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Container maxWidth="lg" sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 2 }}>
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Subtitles sx={{ fontSize: 40, color: 'primary.main' }} />
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  SRT Generator
+                </Typography>
+                <Typography variant="subtitle1" color="text.secondary">
+                  Professional subtitle generation powered by ElevenLabs
+                </Typography>
+              </Box>
             </Box>
+            
+            <Button
+              variant="outlined"
+              startIcon={<SettingsIcon />}
+              onClick={() => setShowSettings(true)}
+              sx={{ minWidth: 120 }}
+            >
+              Settings
+            </Button>
           </Box>
-          
-          <Button
-            variant="outlined"
-            startIcon={<SettingsIcon />}
-            onClick={() => setShowSettings(true)}
-            sx={{ minWidth: 120 }}
-          >
-            Settings
-          </Button>
-        </Box>
 
-        {/* Main Content */}
-        <Box sx={{ flex: 1, overflow: 'auto' }}>
-          <Grid container spacing={3}>
-            {/* File Upload Section */}
-            <Grid item xs={12} md={8}>
-              <Card className="card-hover">
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                    Select Media File
-                  </Typography>
-                  
-                  <DropZone
-                    onFileSelect={fileUpload.handleFileSelect}
-                    disabled={isProcessing}
-                    supportedFormats={config?.supported_formats || []}
-                    onError={showMessage}
-                  />
-                  
-                  <Box sx={{ mt: 3 }}>
-                    <FilePicker
-                      onFileSelect={fileUpload.handleFileSelect}
-                      disabled={isProcessing}
-                      selectedFile={fileUpload.selectedFile}
-                    />
-                  </Box>
+          {/* Main Content */}
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
+            <Grid container spacing={3}>
+              {/* File Upload Section */}
+              <Grid item xs={12} md={8}>
+                <ErrorBoundary>
+                  <Card className="card-hover">
+                    <CardContent sx={{ p: 3 }}>
+                      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                        Select Media File
+                      </Typography>
+                      
+                      <DropZone
+                        onFileSelect={fileUpload.handleFileSelect}
+                        disabled={isProcessing}
+                        supportedFormats={config?.supported_formats || []}
+                        onError={showMessage}
+                      />
+                      
+                      <Box sx={{ mt: 3 }}>
+                        <FilePicker
+                          onFileSelect={fileUpload.handleFileSelect}
+                          disabled={isProcessing}
+                          selectedFile={fileUpload.selectedFile}
+                        />
+                      </Box>
 
-                  {fileUpload.uploadError && (
-                    <Alert severity="error" sx={{ mt: 2 }}>
-                      {fileUpload.uploadError}
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Settings Section */}
-            <Grid item xs={12} md={4}>
-              <Card className="card-hover">
-                <CardContent sx={{ p: 3 }}>
-                  <CharacterLimit
-                    value={characterLimit}
-                    onChange={setCharacterLimit}
-                    disabled={isProcessing}
-                  />
-                  
-                  <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      onClick={handleStartTranscription}
-                      disabled={!canStartTranscription}
-                      fullWidth
-                      sx={{ py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
-                    >
-                      {isProcessing ? 'Processing...' : 'Generate SRT'}
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Progress Section */}
-            {(transcription.progress || isProcessing) && (
-              <Grid item xs={12}>
-                <TranscriptionProgress
-                  progress={transcription.progress || {
-                    stage: 'validation',
-                    percentage: 0,
-                    message: 'Initializing...'
-                  }}
-                  isActive={isProcessing}
-                  startTime={transcription.startTime || undefined}
-                />
+                      {fileUpload.uploadError && (
+                        <Alert severity="error" sx={{ mt: 2 }}>
+                          {fileUpload.uploadError}
+                        </Alert>
+                      )}
+                    </CardContent>
+                  </Card>
+                </ErrorBoundary>
               </Grid>
-            )}
 
-            {/* Results Section */}
-            {transcription.result && (
-              <Grid item xs={12}>
-                <ResultsDisplay
-                  result={transcription.result}
-                  onDownload={handleDownload}
-                  onShowInFolder={handleShowInFolder}
-                  onRetry={handleRetry}
-                  processingTime={transcription.processingTime || undefined}
+              {/* Settings Section */}
+              <Grid item xs={12} md={4}>
+                <ErrorBoundary>
+                  <Card className="card-hover">
+                    <CardContent sx={{ p: 3 }}>
+                      <CharacterLimit
+                        value={characterLimit}
+                        onChange={setCharacterLimit}
+                        disabled={isProcessing}
+                      />
+                      
+                      <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          onClick={handleStartTranscription}
+                          disabled={!canStartTranscription}
+                          fullWidth
+                          sx={{ py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
+                        >
+                          {isProcessing ? 'Processing...' : 'Generate SRT'}
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </ErrorBoundary>
+              </Grid>
+
+              {/* Progress Section */}
+              {(transcription.progress || isProcessing) && (
+                <Grid item xs={12}>
+                  <ErrorBoundary>
+                    <TranscriptionProgress
+                      progress={transcription.progress || {
+                        stage: 'validation',
+                        percentage: 0,
+                        message: 'Initializing...'
+                      }}
+                      isActive={isProcessing}
+                      startTime={transcription.startTime || undefined}
+                    />
+                  </ErrorBoundary>
+                </Grid>
+              )}
+
+              {/* Results Section */}
+              {transcription.result && (
+                <Grid item xs={12}>
+                  <ErrorBoundary>
+                    <ResultsDisplay
+                      result={transcription.result}
+                      onDownload={handleDownload}
+                      onShowInFolder={handleShowInFolder}
+                      onRetry={handleRetry}
+                      processingTime={transcription.processingTime || undefined}
+                    />
+                    
+                    {transcription.result.success && (
+                      <Box sx={{ mt: 2, textAlign: 'center' }}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleNewTranscription}
+                          sx={{ minWidth: 160 }}
+                        >
+                          New Transcription
+                        </Button>
+                      </Box>
+                    )}
+                  </ErrorBoundary>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
+
+          {/* Settings Dialog */}
+          <Dialog open={showSettings} onClose={() => setShowSettings(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Settings</DialogTitle>
+            <DialogContent>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+                <TextField
+                  label="ElevenLabs API Key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  type="password"
+                  fullWidth
+                  helperText="Get your API key from https://elevenlabs.io/settings"
                 />
                 
-                {transcription.result.success && (
-                  <Box sx={{ mt: 2, textAlign: 'center' }}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleNewTranscription}
-                      sx={{ minWidth: 160 }}
-                    >
-                      New Transcription
-                    </Button>
-                  </Box>
+                <Divider />
+                
+                <CharacterLimit
+                  value={characterLimit}
+                  onChange={setCharacterLimit}
+                />
+                
+                {!config?.elevenlabs_api_key && (
+                  <Alert severity="warning">
+                    <AlertTitle>API Key Required</AlertTitle>
+                    Please enter your ElevenLabs API key to use the transcription service.
+                  </Alert>
                 )}
-              </Grid>
-            )}
-          </Grid>
-        </Box>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowSettings(false)}>Cancel</Button>
+              <Button onClick={handleSaveSettings} variant="contained">
+                Save Settings
+              </Button>
+            </DialogActions>
+          </Dialog>
 
-        {/* Settings Dialog */}
-        <Dialog open={showSettings} onClose={() => setShowSettings(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Settings</DialogTitle>
-          <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
-              <TextField
-                label="ElevenLabs API Key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                type="password"
-                fullWidth
-                helperText="Get your API key from https://elevenlabs.io/settings"
-              />
-              
-              <Divider />
-              
-              <CharacterLimit
-                value={characterLimit}
-                onChange={setCharacterLimit}
-              />
-              
-              {!config?.elevenlabs_api_key && (
-                <Alert severity="warning">
-                  <AlertTitle>API Key Required</AlertTitle>
-                  Please enter your ElevenLabs API key to use the transcription service.
-                </Alert>
-              )}
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowSettings(false)}>Cancel</Button>
-            <Button onClick={handleSaveSettings} variant="contained">
-              Save Settings
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Snackbar */}
-        <Snackbar
-          open={showSnackbar}
-          autoHideDuration={4000}
-          onClose={() => setShowSnackbar(false)}
-          message={snackbarMessage}
-        />
-      </Container>
-    </ThemeProvider>
+          {/* Snackbar */}
+          <Snackbar
+            open={showSnackbar}
+            autoHideDuration={4000}
+            onClose={() => setShowSnackbar(false)}
+            message={snackbarMessage}
+          />
+          
+          {/* Update Notification */}
+          <UpdateNotification
+            onUpdateAction={(action) => {
+              console.log('Update action:', action);
+              if (action === 'install') {
+                showMessage('Application will restart to install the update...');
+              }
+            }}
+          />
+        </Container>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

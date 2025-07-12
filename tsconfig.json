@@ -6,6 +6,10 @@
       "dom.iterable",
       "esnext"
     ],
+    "types": [
+      "jest",
+      "node"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -35,7 +39,6 @@
     "build",
     "dist",
     "electron",
-    "**/*.test.tsx",
-    "**/*.test.ts"
+    "**/setupTests.ts"
   ]
 }

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ConfigManager } from '../utils/config';
+import { PathValidator } from '../utils/pathValidator';
 
 export class FileProcessor {
   private configManager: ConfigManager;
@@ -12,6 +13,12 @@ export class FileProcessor {
 
   async validateFile(filePath: string): Promise<boolean> {
     try {
+      // Validate file path for security (path traversal protection)
+      const allowedFormats = this.configManager.getSupportedFormats();
+      if (!PathValidator.isValidFilePath(filePath, allowedFormats)) {
+        throw new Error('Invalid file path or file location not allowed');
+      }
+      
       // Check if file exists
       if (!fs.existsSync(filePath)) {
         throw new Error('File does not exist');
@@ -32,9 +39,9 @@ export class FileProcessor {
 
       // Check file extension
       const extension = path.extname(filePath).toLowerCase();
-      const supportedFormats = this.configManager.getSupportedFormats();
+      const configFormats = this.configManager.getSupportedFormats();
       
-      if (!supportedFormats.includes(extension)) {
+      if (!configFormats.includes(extension)) {
         throw new Error(`Unsupported file format: ${extension}`);
       }
 
@@ -80,14 +87,21 @@ export class FileProcessor {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  createOutputPath(inputFilePath: string): string {
+  async createOutputPath(inputFilePath: string): Promise<string> {
     const outputDir = this.configManager.getOutputDirectory();
     const inputName = path.basename(inputFilePath, path.extname(inputFilePath));
-    const outputPath = path.join(outputDir, `${inputName}.srt`);
     
-    // Ensure output directory exists
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    // Sanitize the filename to prevent path traversal
+    const safeFilename = PathValidator.sanitizeFilename(`${inputName}.srt`);
+    const outputPath = PathValidator.createSafeOutputPath(outputDir, safeFilename);
+    
+    if (!outputPath) {
+      throw new Error('Unable to create safe output path');
+    }
+    
+    // Ensure output directory exists safely
+    if (!await PathValidator.ensureSafeDirectory(outputDir)) {
+      throw new Error('Unable to create or access output directory');
     }
     
     return outputPath;
@@ -96,8 +110,9 @@ export class FileProcessor {
   async ensureOutputDirectory(): Promise<void> {
     const outputDir = this.configManager.getOutputDirectory();
     
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    // Use the safe directory creation method
+    if (!await PathValidator.ensureSafeDirectory(outputDir)) {
+      throw new Error('Unable to create or access output directory');
     }
   }
 }

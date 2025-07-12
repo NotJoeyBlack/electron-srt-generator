@@ -26,7 +26,7 @@ global.ResizeObserver = class ResizeObserver {
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -41,20 +41,20 @@ Object.defineProperty(window, 'matchMedia', {
 // Mock electron API
 Object.defineProperty(window, 'electronAPI', {
   value: {
-    selectFile: jest.fn(),
-    startTranscription: jest.fn(),
+    selectFile: jest.fn().mockResolvedValue(null),
+    startTranscription: jest.fn().mockResolvedValue(undefined),
     onProgress: jest.fn(),
     onComplete: jest.fn(),
     onError: jest.fn(),
-    openFile: jest.fn(),
-    showItemInFolder: jest.fn(),
+    openFile: jest.fn().mockResolvedValue(undefined),
+    showItemInFolder: jest.fn().mockResolvedValue(undefined),
     getConfig: jest.fn().mockResolvedValue({
-      elevenlabs_api_key: '',
+      elevenlabs_api_key: 'test-key',
       default_char_limit: 50,
       supported_formats: ['.mp3', '.mp4', '.wav'],
       output_directory: './output'
     }),
-    saveConfig: jest.fn(),
+    saveConfig: jest.fn().mockResolvedValue(undefined),
   },
   writable: true
 });

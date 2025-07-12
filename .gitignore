@@ -54,3 +54,16 @@ Thumbs.db
 
 # Config with API keys
 config.json
+
+# Test environment files
+.env.test
+test-keys/
+test-data/
+test-reports/
+test-results/
+screenshots/
+videos/
+logs/
+.github-cli-test/
+update-test-report.json
+performance-metrics.json

@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { TranscriptionRequest, TranscriptionResponse, ProgressUpdate, FileInfo, AppConfig } from './types';
+import { UpdateStatus } from './services/updateManager';
 
 const electronAPI = {
   selectFile: (): Promise<FileInfo | null> => ipcRenderer.invoke('file:select'),
@@ -29,7 +30,24 @@ const electronAPI = {
     ipcRenderer.invoke('config:get'),
   
   saveConfig: (config: Partial<AppConfig>): Promise<void> => 
-    ipcRenderer.invoke('config:save', config)
+    ipcRenderer.invoke('config:save', config),
+  
+  // Update-related functions
+  checkForUpdates: (): Promise<void> => 
+    ipcRenderer.invoke('update:check'),
+  
+  downloadUpdate: (): Promise<void> => 
+    ipcRenderer.invoke('update:download'),
+  
+  installUpdate: (): Promise<void> => 
+    ipcRenderer.invoke('update:install'),
+  
+  getUpdateStatus: (): Promise<UpdateStatus> => 
+    ipcRenderer.invoke('update:get-status'),
+  
+  onUpdateStatus: (callback: (status: UpdateStatus) => void) => {
+    ipcRenderer.on('update-status', (_, status) => callback(status));
+  }
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

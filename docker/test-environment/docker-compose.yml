@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  test-runner:
+    build:
+      context: ../../
+      dockerfile: docker/test-environment/Dockerfile
+    container_name: update-system-tests
+    environment:
+      - NODE_ENV=test
+      - DISPLAY=:99
+      - ELECTRON_DISABLE_SECURITY_WARNINGS=1
+    volumes:
+      - ../../test-data:/app/test-data
+      - ../../test-reports:/app/test-reports
+      - ../../test-results:/app/test-results
+      - test-cache:/app/node_modules/.cache
+    ports:
+      - "3001:3001"
+    networks:
+      - test-network
+    depends_on:
+      - mock-api
+    command: node scripts/run-update-tests.js
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Health check: OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mock-api:
+    build:
+      context: ../../
+      dockerfile: docker/test-environment/Dockerfile
+    container_name: mock-github-api
+    environment:
+      - NODE_ENV=test
+    ports:
+      - "3002:3001"
+    networks:
+      - test-network
+    command: node -e "
+      const MockGitHubAPI = require('./test-utils/mock-github-api');
+      const api = new MockGitHubAPI(3001);
+      api.start().then(() => {
+        console.log('Mock GitHub API started on port 3001');
+        process.on('SIGTERM', () => api.stop());
+      });
+    "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  test-ui:
+    build:
+      context: ../../
+      dockerfile: docker/test-environment/Dockerfile
+    container_name: test-ui-runner
+    environment:
+      - NODE_ENV=test
+      - DISPLAY=:99
+      - ELECTRON_DISABLE_SECURITY_WARNINGS=1
+    volumes:
+      - ../../test-results:/app/test-results
+      - ../../screenshots:/app/screenshots
+      - ../../videos:/app/videos
+    ports:
+      - "3003:3001"
+    networks:
+      - test-network
+    depends_on:
+      - mock-api
+    command: npm run test -- --testPathPattern="e2e.test.js"
+    profiles:
+      - ui-tests
+
+  test-performance:
+    build:
+      context: ../../
+      dockerfile: docker/test-environment/Dockerfile
+    container_name: test-performance-runner
+    environment:
+      - NODE_ENV=test
+    volumes:
+      - ../../test-reports:/app/test-reports
+    ports:
+      - "3004:3001"
+    networks:
+      - test-network
+    depends_on:
+      - mock-api
+    command: node scripts/run-update-tests.js
+    profiles:
+      - performance-tests
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  test-cache:
+    driver: local

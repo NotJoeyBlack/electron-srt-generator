@@ -32,10 +32,10 @@ export class SRTProcessor {
       const adjustedSRT = this.adjustTiming(srtContent);
       
       // Create output file path
-      const outputPath = this.fileProcessor.createOutputPath(inputFilePath);
+      const outputPath = await this.fileProcessor.createOutputPath(inputFilePath);
       
-      // Write SRT file
-      fs.writeFileSync(outputPath, adjustedSRT, 'utf-8');
+      // Write SRT file asynchronously
+      await fs.promises.writeFile(outputPath, adjustedSRT, 'utf-8');
       
       return outputPath;
     } catch (error: any) {
