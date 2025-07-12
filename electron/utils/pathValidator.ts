@@ -17,6 +17,21 @@ export class PathValidator {
     app.getPath('temp')
   ];
 
+  // Common local drive letters for Windows
+  private static readonly LOCAL_DRIVE_LETTERS = ['C:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 'M:', 'N:', 'O:', 'P:', 'Q:', 'R:', 'S:', 'T:', 'U:', 'V:', 'W:', 'X:', 'Y:', 'Z:'];
+
+  // Dangerous network paths and system locations to block
+  private static readonly BLOCKED_PATHS = [
+    '\\\\', // UNC network paths
+    '//', // Unix network paths  
+    'C:\\Windows\\System32',
+    'C:\\Program Files',
+    'C:\\Program Files (x86)',
+    '/System/', // macOS system paths
+    '/usr/bin/', // Unix system paths
+    '/bin/', // Unix system paths
+  ];
+
   /**
    * Validates if a file path is safe to access
    * @param filePath The path to validate
@@ -192,44 +207,80 @@ export class PathValidator {
   }
 
   /**
-   * Checks if path is within allowed directories
+   * Checks if path is within allowed directories or local drives (while blocking dangerous paths)
    */
   private static isWithinAllowedDirectories(resolvedPath: string): boolean {
     console.log('[PathValidator] Checking allowed directories for:', resolvedPath);
     console.log('[PathValidator] Allowed directories:', this.ALLOWED_DIRECTORIES);
     
-    const result = this.ALLOWED_DIRECTORIES.some(allowedDir => {
+    // First check if path contains any blocked/dangerous locations
+    const pathLower = resolvedPath.toLowerCase();
+    const isBlocked = this.BLOCKED_PATHS.some(blockedPath => {
+      const blocked = pathLower.includes(blockedPath.toLowerCase());
+      if (blocked) {
+        console.log('[PathValidator] BLOCKED: Path contains dangerous location:', blockedPath);
+      }
+      return blocked;
+    });
+    
+    if (isBlocked) {
+      console.log('[PathValidator] Path blocked due to dangerous location');
+      return false;
+    }
+    
+    // Check specific allowed directories first (user folders)
+    const inAllowedDirs = this.ALLOWED_DIRECTORIES.some(allowedDir => {
       try {
-        // Resolve both paths to handle any symlinks or relative paths
         const normalizedAllowed = path.resolve(path.normalize(allowedDir));
         const normalizedResolved = path.resolve(path.normalize(resolvedPath));
         
-        // Convert to lowercase for case-insensitive comparison on Windows
         const allowedLower = normalizedAllowed.toLowerCase();
         const resolvedLower = normalizedResolved.toLowerCase();
         
-        // Check if the resolved path starts with the allowed directory
-        // Add path separator to ensure we're checking directory boundaries
         const allowedWithSep = allowedLower.endsWith(path.sep) ? allowedLower : allowedLower + path.sep;
         const resolvedWithSep = resolvedLower + path.sep;
         
         const isWithin = resolvedWithSep.startsWith(allowedWithSep) || resolvedLower === allowedLower;
         
-        console.log('[PathValidator] Comparing:');
-        console.log('  Allowed (normalized):', normalizedAllowed);
-        console.log('  Resolved (normalized):', normalizedResolved);
-        console.log('  Allowed (with sep):', allowedWithSep);
-        console.log('  Resolved (with sep):', resolvedWithSep);
-        console.log('  Is within?', isWithin);
+        if (isWithin) {
+          console.log('[PathValidator] Found in allowed directory:', allowedDir);
+        }
         
         return isWithin;
       } catch (error) {
-        console.log('[PathValidator] Error comparing paths:', error);
+        console.log('[PathValidator] Error comparing with allowed dir:', error);
         return false;
       }
     });
     
-    console.log('[PathValidator] Final result for directory check:', result);
-    return result;
+    if (inAllowedDirs) {
+      console.log('[PathValidator] ALLOWED: In specific allowed directory');
+      return true;
+    }
+    
+    // Check if it's on a local drive (Windows)
+    if (process.platform === 'win32') {
+      const driveLetter = resolvedPath.substring(0, 2).toUpperCase();
+      const isLocalDrive = this.LOCAL_DRIVE_LETTERS.includes(driveLetter);
+      
+      console.log('[PathValidator] Checking local drive:', driveLetter, 'Is local?', isLocalDrive);
+      
+      if (isLocalDrive) {
+        console.log('[PathValidator] ALLOWED: On local drive');
+        return true;
+      }
+    } else {
+      // On Unix systems, allow files in user home or common locations
+      const userHome = require('os').homedir();
+      if (resolvedPath.startsWith(userHome) || 
+          resolvedPath.startsWith('/tmp/') || 
+          resolvedPath.startsWith('/var/tmp/')) {
+        console.log('[PathValidator] ALLOWED: In Unix user/temp location');
+        return true;
+      }
+    }
+    
+    console.log('[PathValidator] REJECTED: Not in allowed locations');
+    return false;
   }
 }
